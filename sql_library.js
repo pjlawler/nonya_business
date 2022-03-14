@@ -8,6 +8,7 @@ const sql_statement = (option => {
         case "update an employee's role":
         case "update an employee's manager":
         case 'view employees by manager':
+        case 'view employees by department':
         case 'view all employees':
             return `
             SELECT employees.id AS ID, employees.first_name AS First, employees.last_name AS Last, roles.title AS Title, departments.dept_name AS Department, roles.salary AS Salary,  CONCAT(managers.first_name, " " , managers.last_name) As Reports_to
@@ -42,6 +43,16 @@ const sql_statement = (option => {
             JOIN roles ON employees.role_id=roles.id
             JOIN departments ON roles.department_id=departments.id
             WHERE employees.manager_id=`;
+        
+        case 'employees by department':
+            return `
+            SELECT employees.id AS ID, employees.first_name AS First, employees.last_name AS Last, roles.title AS Title, departments.dept_name AS Department, roles.salary AS Salary
+            FROM employees
+            LEFT JOIN employees AS managers ON employees.manager_id=managers.id
+            JOIN roles ON employees.role_id=roles.id
+            JOIN departments ON roles.department_id=departments.id
+            WHERE departments.id=`;
+        
         case 'employees':
             return `
             SELECT CONCAT(first_name, " ", last_name) as Name, id as ID

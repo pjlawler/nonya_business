@@ -51,18 +51,36 @@ function display_data(data) {
                 if(err) throw err;
                 managers = rows;
                 selectManager_prompt(managers).then(manager => {
-                    console.log(manager)
+                    console.log(manager);
                     const sql = `${sql_statement('employees by manager')}${manager.manager.split(',')[0]} ORDER BY employees.last_name`
                     db.query(sql, (err, rows) => {
                         if(err) throw err;
-                        // Displays respective tile and table based on the selection
+                        // Displays respective title and table based on the selection
                         console.clear();
                         console.log(`\n${manager.manager.split(',')[1]}'s Direct Subordinates\n\n`, cTable.getTable(rows));
-                        main_prompt()
+                        main_prompt();
                     })
                 });
             })
 
+        }
+        else if (selection.includes('employees by department')) {
+            let departments;
+
+            // Gets an array of the departments from the db to be used for selecting in prompt
+            db.query(sql_statement('departments'), (err, rows) => {
+                if(err) throw err;
+                departments = rows;
+                selectDepartment_prompt(departments).then(department => {
+                    const sql = `${sql_statement('employees by department')}${department.department.split(',')[0]} ORDER by employees.last_name`
+                    db.query(sql, (err, rows) => {
+                        if(err) throw err;
+                        console.clear();
+                        console.log(`\n${department.department.split(',')[1]}'s Employees\n\n`, cTable.getTable(rows));
+                        main_prompt();
+                    });
+                });
+            });
         }
         
         // Performs "add new" selections
@@ -151,13 +169,13 @@ function display_data(data) {
                 db.query(sql_statement('employees'), (err, rows) => {
                     if(err) throw err;
                     employees = rows;
-                        updateEmployeeManager_prompt(employees, managers).then(employee => {
-                            const sql = `UPDATE employees SET manager_id=${employee.manager_id} WHERE id=${employee.employee_id}`
-                            db.query(sql, (err, rows) => {
-                                if(err) throw err;
-                                delayedMessage(`Employee #${employee.employee_id} updated successfully`);
-                            })
+                    updateEmployeeManager_prompt(employees, managers).then(employee => {
+                        const sql = `UPDATE employees SET manager_id=${employee.manager_id} WHERE id=${employee.employee_id}`
+                        db.query(sql, (err, rows) => {
+                            if(err) throw err;
+                            delayedMessage(`Employee #${employee.employee_id} updated successfully`);
                         })
+                    })
                 });
             });
         }
@@ -178,7 +196,7 @@ const main_prompt = () => {
         name: 'main',
         message: 'Select opition?',
         type: 'rawlist',
-        choices: ['View all departments', 'View all roles', 'View all employees', 'View employees by manager', 'Add a department', 'Add a role', 'Add an employee', "Update an employee's role", "Update an employee's manager", 'Quit']
+        choices: ['View all departments', 'View all roles', 'View all employees', 'View employees by manager', 'View employees by department', 'Add a department', 'Add a role', 'Add an employee', "Update an employee's role", "Update an employee's manager", 'Quit']
 
     }]).then(data => display_data(data));
 }
@@ -377,6 +395,26 @@ const selectManager_prompt = (managers) => {
                     }
                 });
                 return manager;
+            }
+        }
+    ])
+}
+const selectDepartment_prompt = (departments) => {
+    let dept_names = departments.map(item => item.Name);
+    return inquirer.prompt([
+        {
+            name: 'department',
+            message: "Please select the department to view its employees",
+            type: 'list',
+            choices: dept_names,
+            filter(input) {
+                let department = null;
+                departments.forEach(item => {
+                    if(item.Name === input) {
+                        department = `${item.ID},${item.Name}` 
+                    }
+                });
+                return department;
             }
         }
     ])
