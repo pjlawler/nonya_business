@@ -16,6 +16,159 @@ function init() {
 
 }
 
+function display_data(data) {
+
+    if(data.main === 'Quit') { 
+        db.end();
+        console.log('Goodbye');
+        return false;
+    }
+    
+    console.clear();
+
+    // Displays the proper table based on  what was selected from the main menu
+    const selection = data.main.toLowerCase()
+    const sql = sql_statement(selection);
+
+    db.query(sql, (err, rows) => {
+        
+        if(err) { 
+            console.log(err.message);
+            return false; 
+        }
+
+        // Displays respective tile and table based on the selection
+        console.log(`\n${tableTitle(selection)}\n\n`, cTable.getTable(rows));
+
+        // Remains in the main menu if a 'view' was selected
+        if(selection.includes('view all')) { main_prompt() }
+        
+        else if (selection.includes('employees by manager')) {
+            let managers;
+
+            // Gets an array of the mangers from the db to be used for selecting in prompt
+            db.query(sql_statement('managers'), (err, rows) => {
+                if(err) throw err;
+                managers = rows;
+                selectManager_prompt(managers).then(manager => {
+                    console.log(manager)
+                    const sql = `${sql_statement('employees by manager')}${manager.manager.split(',')[0]} ORDER BY employees.last_name`
+                    db.query(sql, (err, rows) => {
+                        if(err) throw err;
+                        // Displays respective tile and table based on the selection
+                        console.clear();
+                        console.log(`\n${manager.manager.split(',')[1]}'s Direct Subordinates\n\n`, cTable.getTable(rows));
+                        main_prompt()
+                    })
+                });
+            })
+
+        }
+        
+        // Performs "add new" selections
+        else if (selection.includes('add an employee')) {
+            let roles;
+            let managers;
+
+            // Gets an array of the roles from the db to be used for selecting in prompt
+            db.query(sql_statement('roles'), (err, rows) => {
+                if(err) throw err;
+                roles = rows;
+
+                // Gets an array of the managers from the db to be used for selecting in prompt
+                db.query(sql_statement('managers'), (err, rows) => {
+                    if(err) throw err;
+                    managers = rows;
+                    
+                    // Calls the prompt to input the new data
+                    newEmployee_prompt(managers, roles).then(employee => {
+
+                        // Inserts the new data into the db once received from the prompt 
+                        const sql = `${sql_statement('newEmployee')} ('${employee.first_name}', '${employee.last_name}', ${employee.role_id}, ${employee.manager_id})`
+                        db.query(sql, (err) => {
+                            if(err) throw err;
+                            delayedMessage('New employee added successfully!');
+                        })
+                    })
+                }); 
+            });           
+        }
+        else if (selection.includes('add a department')) {
+            newDepartment_prompt().then(department => {
+                const sql = `${sql_statement('newDepartment')} ('${department.dept_name}')`
+                db.query(sql, (err) => {
+                    if(err) throw err;
+                    delayedMessage('New department added successfully!');
+                })
+            })
+        }
+        else if (selection.includes('add a role')) {
+            let departments;
+
+            db.query(sql_statement('departments'), (err, rows) => {
+                if(err) throw err;
+                
+                departments = rows;
+                                    
+                newRole_prompt(departments).then(role => {
+                    const sql = `${sql_statement('newRole')} ('${role.title}', '${role.department_id}', ${role.salary})`
+                    db.query(sql, (err) => {
+                        if(err) throw err;
+                        delayedMessage('New role added successfully!');
+                    })
+                })
+            });
+        }
+
+        // Performs "update" selections
+        else if (selection.includes("update an employee's role")){
+            let roles;
+            let employees;
+            db.query(sql_statement('roles'), (err, rows) => {
+                if(err) throw err;
+                roles = rows;
+                db.query(sql_statement('employees'), (err, rows) => {
+                    if(err) throw err;
+                    employees = rows;
+                        updateEmployeeRole_prompt(employees, roles).then(employee => {
+                            const sql = `UPDATE employees SET role_id=${employee.role_id} WHERE id=${employee.employee_id}`
+                            db.query(sql, (err, rows) => {
+                                if(err) throw err;
+                                delayedMessage(`Employee #${employee.employee_id} updated successfully`);
+                            })
+                        })
+                });
+            });
+
+        }
+        else if (selection.includes("update an employee's manager")) {
+
+            let managers;
+            let employees;
+            db.query(sql_statement('managers'), (err, rows) => {
+                if(err) throw err;
+                managers = rows;
+                db.query(sql_statement('employees'), (err, rows) => {
+                    if(err) throw err;
+                    employees = rows;
+                        updateEmployeeManager_prompt(employees, managers).then(employee => {
+                            const sql = `UPDATE employees SET manager_id=${employee.manager_id} WHERE id=${employee.employee_id}`
+                            db.query(sql, (err, rows) => {
+                                if(err) throw err;
+                                delayedMessage(`Employee #${employee.employee_id} updated successfully`);
+                            })
+                        })
+                });
+            });
+        }
+        else {
+            console.log('error')
+        }
+    });
+
+
+}
+
 // Inquirer prompts and db functions
 const main_prompt = () => {
     console.log(`
@@ -25,104 +178,9 @@ const main_prompt = () => {
         name: 'main',
         message: 'Select opition?',
         type: 'rawlist',
-        choices: ['View all departments', 'View all roles', 'View all employees', 'Add a department', 'Add a role', 'Add an employee', 'Update an employee role', 'Quit']
+        choices: ['View all departments', 'View all roles', 'View all employees', 'View employees by manager', 'Add a department', 'Add a role', 'Add an employee', "Update an employee's role", "Update an employee's manager", 'Quit']
 
-    }]).then(data => {
-        
-        if(data.main === 'Quit') { 
-            db.end();
-            console.log('Goodbye');
-            return false;
-        }
-        console.clear();
-               
-        // Displays the proper table based on  what was selected from the main menu
-        const selection = data.main.toLowerCase()
-        const sql = sql_statement(selection);
-
-        db.query(sql, (err, rows) => {
-            if(err) { 
-                console.log(err.message);
-                return false; 
-            }
-
-            // Displays respective tile and table based on the selection
-            console.log(`\n${tableTitle(selection)}\n\n`, cTable.getTable(rows));
-
-            // Remains in the main menu if a 'view' was selected
-            if(selection.includes('view')) { main_prompt() }           
-            
-
-            // Performs "add new" selections
-            else if (selection.includes('add an employee')) {
-                let roles;
-                let managers;
-    
-                db.query(sql_statement('roles'), (err, rows) => {
-                    if(err) throw err;
-                    roles = rows;
-                    db.query(sql_statement('managers'), (err, rows) => {
-                        if(err) throw err;
-                        managers = rows;
-                        newEmployee_prompt(managers, roles).then(employee => {
-                            const sql = `${sql_statement('newEmployee')} ('${employee.first_name}', '${employee.last_name}', ${employee.role_id}, ${employee.manager_id})`
-                            db.query(sql, (err) => {
-                                if(err) throw err;
-                                init();
-                            })
-                        })
-                    }); 
-                });           
-            }
-            else if (selection.includes('add a department')) {
-                newDepartment_prompt().then(department => {
-                    const sql = `${sql_statement('newDepartment')} ('${department.dept_name}')`
-                    db.query(sql, (err) => {
-                        if(err) throw err;
-                        init();
-                    })
-                })
-            }
-            else if (selection.includes('add a role')) {
-                let departments;
-
-                db.query(sql_statement('departments'), (err, rows) => {
-                    if(err) throw err;
-                    
-                    departments = rows;
-                                        
-                    newRole_prompt(departments).then(role => {
-                        const sql = `${sql_statement('newRole')} ('${role.title}', '${role.department_id}', ${role.salary})`
-                        db.query(sql, (err) => {
-                            if(err) throw err;
-                            init();
-                        })
-                    })
-                });
-            }
-            else if (selection.includes('update an employee role')){
-                let roles;
-                let employees;
-                db.query(sql_statement('roles'), (err, rows) => {
-                    if(err) throw err;
-                    roles = rows;
-                    db.query(sql_statement('employees'), (err, rows) => {
-                        if(err) throw err;
-                        employees = rows;
-                            updateEmployeeRoll_prompt(employees, roles).then(employee => {
-                                console.log(employee);
-                                const sql = `UPDATE employees SET role_id = ${employee.role_id} WHERE id = ${employee.employee_id}`
-                                db.query(sql, (err, rows) => {
-                                    if(err) throw err;
-                                    init();
-                                })
-                            })
-                    });
-                });
-
-            }
-        });
-    });
+    }]).then(data => display_data(data));
 }
 const newEmployee_prompt = (managers, roles) => {
 
@@ -147,7 +205,7 @@ const newEmployee_prompt = (managers, roles) => {
         },
         {
             name: 'role_id',
-            message: "Please enter the employee's role",
+            message: "Please select the new employee's role",
             type: 'list',
             choices: role_names,
             filter(input) {
@@ -162,7 +220,7 @@ const newEmployee_prompt = (managers, roles) => {
         },
         {
             name: 'manager_id',
-            message: "Please enter the employee's manager",
+            message: "Please select the employee's manager",
             type: 'list',
             choices: manager_names,
             filter(input) {
@@ -222,7 +280,7 @@ const newRole_prompt = (departments) => {
         }
     ]);
 }
-const updateEmployeeRoll_prompt = (employees, roles) => {
+const updateEmployeeRole_prompt = (employees, roles) => {
 
     let employee_names = employees.map(item => item.Name);
 
@@ -247,7 +305,7 @@ const updateEmployeeRoll_prompt = (employees, roles) => {
         },        
         {
             name: 'role_id',
-            message: "Please enter the employee's role",
+            message: "Please select the employee's role",
             type: 'list',
             choices: role_names,
             filter(input) {
@@ -263,7 +321,66 @@ const updateEmployeeRoll_prompt = (employees, roles) => {
     ]);
 
 }
+const updateEmployeeManager_prompt = (employees, managers) => {
 
+    let employee_names = employees.map(item => item.Name);
+    let manager_names = managers.map(item => item.Manager);
+    manager_names.unshift('None');
+
+    return inquirer.prompt([
+        {
+            name: 'employee_id',
+            message: "Please select the employee you'd like to update",
+            type: 'list',
+            choices: employee_names,
+            filter(input) {
+                let employee_id = null;
+                employees.forEach(item => {
+                    if(item.Name === input) {
+                        employee_id = item.ID
+                    }
+                });
+                return employee_id;
+            }
+        },        
+        {
+            name: 'manager_id',
+            message: "Please select the employee's manager",
+            type: 'list',
+            choices: manager_names,
+            filter(input) {
+                let manager_id = null;
+                managers.forEach(item => {
+                    if(item.Manager === input) {
+                        manager_id = item.ID
+                    }
+                });
+                return manager_id;
+            }
+        }
+    ]);
+
+}
+const selectManager_prompt = (managers) => {
+    let manager_names = managers.map(item => item.Manager);
+    return inquirer.prompt([
+        {
+            name: 'manager',
+            message: "Please select the manager to view their employees",
+            type: 'list',
+            choices: manager_names,
+            filter(input) {
+                let manager = null;
+                managers.forEach(item => {
+                    if(item.Manager === input) {
+                        manager = `${item.ID},${item.Manager}` 
+                    }
+                });
+                return manager;
+            }
+        }
+    ])
+}
 
 // Misc Functions
 function validateAnswer(value, type, message) {
@@ -285,15 +402,21 @@ function validateAnswer(value, type, message) {
             return false;
         }
     }
-  }
+}
+function delayedMessage(message) {
+    console.log(message)
+    setTimeout( () => {
+        init();
+    }, 1000)
+}
 const tableTitle = (selection) => {
     switch (true) {
         case selection.includes('employee'):
-            return 'Current Employees';
+            return 'All Employees';
         case selection.includes('role'):
-            return 'Current Roles';
+            return 'All Roles';
         default:
-            return 'Current Departments';
+            return 'All Departments';
     }
 }
     
@@ -302,4 +425,3 @@ db.connect(err => {
     if (err) throw err;
     init();
 });
-
