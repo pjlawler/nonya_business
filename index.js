@@ -247,7 +247,7 @@ const main_prompt = () => {
     `);
     return inquirer.prompt([{
         name: 'main',
-        message: 'Select opition?',
+        message: 'Please select an opition?',
         type: 'list',
         choices: ['View all departments', 'View all roles', 'View all employees', 'View employees by manager', 'Add a department', 'Add a role', 'Add an employee', "Update an employee's role", "Update an employee's manager", 'Delete an employee', 'Delete a role', 'Delete a department', 'View department utilized budget', 'Quit']
 

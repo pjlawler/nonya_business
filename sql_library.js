@@ -1,8 +1,7 @@
 
+// Below are the sql statements used by the app
 
 const sql_statement = (option => {
-
-
     switch(option) {
         case 'add an employee':
         case 'delete an employee':
@@ -88,12 +87,12 @@ const sql_statement = (option => {
         case 'newDepartment':
             return  `
             INSERT INTO departments (dept_name)
-            VALUES  `
+            VALUES `
 
         case 'newRole':
             return  `
             INSERT INTO roles (title, department_id, salary)
-            VALUES  `
+            VALUES `
         
         case 'deleteEmployee':
             return `
