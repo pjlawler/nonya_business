@@ -2,17 +2,29 @@ const inquirer = require('inquirer');
 const cTable = require('console.table');
 const db = require('./db/connection');
 const { sql_statement } = require('./sql_library');
+let currentSQL =  null;
 
 function init() {
     console.clear();
-    console.log(`
-    =======================================
-    =                                     =
-    =  Welcome to the Nonya Business CMS  =
-    =                                     =
-    =======================================
-    `)
-    main_prompt();
+
+    if(currentSQL){
+        db.query(currentSQL, (err, rows) => {
+
+
+
+            main_prompt();
+        })
+
+    } else {
+        console.log(`
+        =======================================
+        =                                     =
+        =  Welcome to the Nonya Business CMS  =
+        =                                     =
+        =======================================
+        `)
+        main_prompt();
+    }
 
 }
 
@@ -40,9 +52,10 @@ function display_data(data) {
         // Displays respective tile and table based on the selection
         console.log(`\n${tableTitle(selection)}\n\n`, cTable.getTable(rows));
 
-        // Remains in the main menu if a 'view' was selected
-        if(selection.includes('view all')) { main_prompt() }
-        
+
+        // Remains in the main menu if a 'view all' was selected
+        if(selection.includes('view all') || selection.includes('view department utilized budget')) { main_prompt() }
+                
         else if (selection.includes('employees by manager')) {
             let managers;
 
@@ -62,6 +75,11 @@ function display_data(data) {
                     })
                 });
             })
+
+        
+        }
+
+        else if (selection.includes('department total utilized budget')){
 
         }
         else if (selection.includes('employees by department')) {
@@ -179,24 +197,77 @@ function display_data(data) {
                 });
             });
         }
+
+        // Peforms "delete" selections
+        else if (selection.includes('delete an employee')) {
+
+            let employees;
+
+            db.query(sql_statement('employees'), (err, rows) => {
+                if(err) throw err;
+                
+                employees = rows;
+
+                selectEmployee_prompt(employees).then(employee => {
+                    const sql = `${sql_statement('deleteEmployee')}${employee.id}`
+
+                    db.query(sql, (err, rows) => {
+                        if(err) throw err;
+                        delayedMessage(`Employee #${employee.id} deleted successfully`)
+                    })
+                })
+            })
+        }
+        else if (selection.includes('delete a role')) {
+            let roles;
+            db.query(sql_statement('roles'), (err, rows) => {
+                if(err) throw err;
+                roles = rows;
+                selectRole_prompt(roles).then(role => {
+                    const sql = `${sql_statement('deleteRole')}${role.id}`
+                    db.query(sql, (err, rows) => {
+                        if(err) throw err;
+                        delayedMessage(`Role #${role.id} deleted successfully`);
+                    })
+                })
+            })
+        }
+        else if (selection.includes('delete a department')) {
+            let departments;
+            db.query(sql_statement('departments'), (err, rows ) => {
+                if(err) throw err;
+                departments = rows;
+                selectDepartment_prompt(departments).then(department => {
+                    const sql = `${sql_statement('deleteDepartment')}${department.id}`
+                    db.query(sql, (err, rows) => {
+                        if(err) throw err;
+                        delayedMessage(`Department #${department.id} deleted successfully`);
+                    })
+                })
+            })
+        }
         else {
-            console.log('error')
+            console.log(selection)
         }
     });
 
 
 }
 
+
+
 // Inquirer prompts and db functions
 const main_prompt = () => {
+    
+
     console.log(`
     Main Menu
     `);
     return inquirer.prompt([{
         name: 'main',
         message: 'Select opition?',
-        type: 'rawlist',
-        choices: ['View all departments', 'View all roles', 'View all employees', 'View employees by manager', 'View employees by department', 'Add a department', 'Add a role', 'Add an employee', "Update an employee's role", "Update an employee's manager", 'Quit']
+        type: 'list',
+        choices: ['View all departments', 'View all roles', 'View all employees', 'View employees by manager', 'Add a department', 'Add a role', 'Add an employee', "Update an employee's role", "Update an employee's manager", 'Delete an employee', 'Delete a role', 'Delete a department', 'View department utilized budget', 'Quit']
 
     }]).then(data => display_data(data));
 }
@@ -397,28 +468,69 @@ const selectManager_prompt = (managers) => {
                 return manager;
             }
         }
-    ])
+    ]);
 }
-const selectDepartment_prompt = (departments) => {
-    let dept_names = departments.map(item => item.Name);
+const selectEmployee_prompt = (employees) => {
+    let employee_names = employees.map(item => item.Name);
     return inquirer.prompt([
         {
-            name: 'department',
-            message: "Please select the department to view its employees",
+            name: 'id',
+            message: 'Please select the employee you wish to delete',
             type: 'list',
-            choices: dept_names,
+            choices: employee_names,
             filter(input) {
-                let department = null;
-                departments.forEach(item => {
+                let id;
+                employees.forEach(item => {
                     if(item.Name === input) {
-                        department = `${item.ID},${item.Name}` 
+                        id = item.ID
                     }
                 });
-                return department;
+                return id;
             }
         }
-    ])
+    ]);
 }
+const selectDepartment_prompt = (departments) => {
+    let department_names = departments.map(item => item.Name);
+    return inquirer.prompt([
+        {
+            name: 'id',
+            message: 'Please select the department you wish to delete',
+            type: 'list',
+            choices: department_names,
+            filter(input){
+                let id;
+                departments.forEach(item => {
+                    if(item.Name === input) {
+                        id = item.ID
+                    }
+                });
+                return id;
+            }
+        }
+    ]);
+}
+const selectRole_prompt = (roles) => {
+    let role_titles = roles.map(item => item.Title);
+    return inquirer.prompt([
+        {
+            name: 'id',
+            message: 'Please select the role you wish to delete',
+            type: 'list',
+            choices: role_titles,
+            filter(input) {
+                let id;
+                roles.forEach(item => {
+                    if(item.Title === input) {
+                        id = item.ID
+                    }
+                });
+                return id;
+            }
+        }
+    ]);
+}
+
 
 // Misc Functions
 function validateAnswer(value, type, message) {
@@ -449,10 +561,15 @@ function delayedMessage(message) {
 }
 const tableTitle = (selection) => {
     switch (true) {
+        case selection.includes('view department utilized budget'):
+            return "Departments' Utilized Budgets";
+
         case selection.includes('employee'):
             return 'All Employees';
+
         case selection.includes('role'):
             return 'All Roles';
+
         default:
             return 'All Departments';
     }

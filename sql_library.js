@@ -5,6 +5,7 @@ const sql_statement = (option => {
 
     switch(option) {
         case 'add an employee':
+        case 'delete an employee':
         case "update an employee's role":
         case "update an employee's manager":
         case 'view employees by manager':
@@ -14,21 +15,23 @@ const sql_statement = (option => {
             SELECT employees.id AS ID, employees.first_name AS First, employees.last_name AS Last, roles.title AS Title, departments.dept_name AS Department, roles.salary AS Salary,  CONCAT(managers.first_name, " " , managers.last_name) As Reports_to
             FROM employees
             LEFT JOIN employees AS managers ON employees.manager_id=managers.id
-            JOIN roles ON employees.role_id=roles.id
-            JOIN departments ON roles.department_id=departments.id
+            LEFT JOIN roles ON employees.role_id=roles.id
+            LEFT JOIN departments ON roles.department_id=departments.id
             ORDER BY employees.last_name
             `;
         
-        case "add a role":
+        case 'add a role':
+        case 'delete a role':
         case 'view all roles':
             return `
             SELECT roles.title AS Title,  roles.id as ID, departments.dept_name as Department, roles.salary AS Salary
             FROM roles
-            JOIN departments ON roles.department_id=departments.id
+            LEFT JOIN departments ON roles.department_id=departments.id
             ORDER BY roles.title
             `
         
         case 'add a department':
+        case 'delete a department':
         case 'view all departments':
             return `
             SELECT departments.dept_name AS Department, departments.id AS ID
@@ -40,6 +43,7 @@ const sql_statement = (option => {
             SELECT employees.id AS ID, employees.first_name AS First, employees.last_name AS Last, roles.title AS Title, departments.dept_name AS Department, roles.salary AS Salary
             FROM employees
             LEFT JOIN employees AS managers ON employees.manager_id=managers.id
+<<<<<<< HEAD
             JOIN roles ON employees.role_id=roles.id
             JOIN departments ON roles.department_id=departments.id
             WHERE employees.manager_id=`;
@@ -53,6 +57,22 @@ const sql_statement = (option => {
             JOIN departments ON roles.department_id=departments.id
             WHERE departments.id=`;
         
+=======
+            LEFT JOIN roles ON employees.role_id=roles.id
+            LEFT JOIN departments ON roles.department_id=departments.id
+            WHERE employees.manager_id=`
+        
+        case 'view department utilized budget':
+            return `
+            SELECT departments.dept_name AS Department, COUNT(employees.id) AS Total_Employees, SUM(roles.salary) AS Total_Salaries
+            FROM employees
+            LEFT JOIN employees AS managers ON employees.manager_id=managers.id
+            LEFT JOIN roles ON employees.role_id=roles.id
+            LEFT JOIN departments ON roles.department_id=departments.id
+            GROUP BY Department
+            ORDER BY Department
+            `
+>>>>>>> feature/delete
         case 'employees':
             return `
             SELECT CONCAT(first_name, " ", last_name) as Name, id as ID
@@ -91,7 +111,21 @@ const sql_statement = (option => {
             return  `
             INSERT INTO roles (title, department_id, salary)
             VALUES  `
-
+        
+        case 'deleteEmployee':
+            return `
+            DELETE FROM employees
+            WHERE id=`
+        
+        case 'deleteDepartment':
+            return `
+            DELETE FROM departments
+            WHERE id=`
+    
+        case 'deleteRole':
+            return `
+            DELETE FROM roles
+            WHERE id=`
     }
 });
 
