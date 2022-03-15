@@ -36,7 +36,7 @@ THEN I am prompted to select an employee to update and their new role
  _ _ _
  ## *Usage Information*
   It's a very simple CMS application, just follow the command line prompts to Create, Read, Update and Delete records in the database
-  - Walkthroug Video: https://drive.google.com/file/d/1AV_sWs2gjyG9qidyV1IRe05ERC79dzM2/view
+  - Walkthroug Video: https://drive.google.com/file/d/1xC7SjwOlOJRzFxBL-dL6hyT8bwvkBle3/view
   - GitHub Repository: https://github.com/pjlawler/nonya_business
   - - -
  ## *Installation Instructions*

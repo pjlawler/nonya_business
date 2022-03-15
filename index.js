@@ -1,7 +1,7 @@
 const inquirer = require('inquirer');
 const cTable = require('console.table');
 const db = require('./db/connection');
-const { sql_statement } = require('./sql_library');
+const { sql_statement } = require('./libraries/sql_library');
 
 function init() {
     console.clear();
