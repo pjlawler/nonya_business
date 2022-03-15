@@ -6,11 +6,11 @@ const { sql_statement } = require('./sql_library');
 function init() {
     console.clear();
     console.log(`
-        =======================================
-        =                                     =
-        =  Welcome to the Nonya Business CMS  =
-        =                                     =
-        =======================================
+        ====================================================
+        =                                                  =
+        =  Welcome to the Nonya Business Employee Tracker  =
+        =                                                  =
+        ====================================================
         `)
         main_prompt();
 
