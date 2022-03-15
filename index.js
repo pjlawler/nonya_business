@@ -2,21 +2,10 @@ const inquirer = require('inquirer');
 const cTable = require('console.table');
 const db = require('./db/connection');
 const { sql_statement } = require('./sql_library');
-let currentSQL =  null;
 
 function init() {
     console.clear();
-
-    if(currentSQL){
-        db.query(currentSQL, (err, rows) => {
-
-
-
-            main_prompt();
-        })
-
-    } else {
-        console.log(`
+    console.log(`
         =======================================
         =                                     =
         =  Welcome to the Nonya Business CMS  =
@@ -24,7 +13,6 @@ function init() {
         =======================================
         `)
         main_prompt();
-    }
 
 }
 
@@ -41,21 +29,19 @@ function display_data(data) {
     // Displays the proper table based on  what was selected from the main menu
     const selection = data.main.toLowerCase()
     const sql = sql_statement(selection);
-
+    
+    // Performs a query based on the selection to display the table data (i.e. add employee displays all employees)
     db.query(sql, (err, rows) => {
         
-        if(err) { 
-            console.log(err.message);
-            return false; 
-        }
+        if(err) throw err;
 
-        // Displays respective tile and table based on the selection
+        // Displays respective tile and table data based on selection
         console.log(`\n${tableTitle(selection)}\n\n`, cTable.getTable(rows));
 
-
-        // Remains in the main menu if a 'view all' was selected
+        // Remains in the main menu if one of the 'view all' or 'view department utilized budget' was selected
         if(selection.includes('view all') || selection.includes('view department utilized budget')) { main_prompt() }
-                
+
+        // If something else was selected, then the "else if" statements below determine which prompt(s) to be displayed for additional inputs
         else if (selection.includes('employees by manager')) {
             let managers;
 
@@ -78,12 +64,6 @@ function display_data(data) {
 
         
         }
-
-        else if (selection.includes('department total utilized budget')){
-
-        }
-        
-        // Performs "add new" selections
         else if (selection.includes('add an employee')) {
             let roles;
             let managers;
@@ -129,7 +109,7 @@ function display_data(data) {
                 departments = rows;
                                     
                 newRole_prompt(departments).then(role => {
-                    const sql = `${sql_statement('newRole')} ('${role.title}', '${role.department_id}', ${role.salary})`
+                    const sql = `${sql_statement('newRole')} ('${role.title}', '${role.department_id}', ${parseInt(role.salary)})`
                     db.query(sql, (err) => {
                         if(err) throw err;
                         delayedMessage('New role added successfully!');
@@ -137,8 +117,6 @@ function display_data(data) {
                 })
             });
         }
-
-        // Performs "update" selections
         else if (selection.includes("update an employee's role")){
             let roles;
             let employees;
@@ -179,8 +157,6 @@ function display_data(data) {
                 });
             });
         }
-
-        // Peforms "delete" selections
         else if (selection.includes('delete an employee')) {
 
             let employees;
@@ -229,16 +205,13 @@ function display_data(data) {
             })
         }
         else {
-            console.log(selection)
+            // Catchall in the event of an unfound selection
+            console.log(`${selection} -- NOT FOUND`)
         }
     });
-
-
 }
 
-
-
-// Inquirer prompts and db functions
+// Inquirer prompts which return data based on the users inputs
 const main_prompt = () => {
     
 
@@ -346,8 +319,7 @@ const newRole_prompt = (departments) => {
             name: 'salary',
             message: "Please enter the salary for the new role",
             type: 'input',
-            filter (val) { return parseInt(val)},
-            validate: inputValue => { return validateAnswer(inputValue, 'salary_input', "You must enter a valid salary (0 - 100,000,000)")}
+            validate: inputValue => { return validateAnswer(inputValue, 'salary_input', "You must enter a valid salary (0 - 100000000)")},
         }
     ]);
 }
@@ -513,9 +485,9 @@ const selectRole_prompt = (roles) => {
     ]);
 }
 
-
 // Misc Functions
 function validateAnswer(value, type, message) {
+    // Validates the inquirer prompt is proper if needed
     switch(type) {
         case 'text_input':
             if(!value) { 
@@ -525,7 +497,8 @@ function validateAnswer(value, type, message) {
           return true;
         }
     case 'salary_input':
-        const salary = value;
+        const salary = parseInt(value);
+        if(salary === NaN || value.includes(',')) { return false; }
         if(salary >= 0 && salary <= 100000000) {
             return true;
         }
@@ -536,25 +509,28 @@ function validateAnswer(value, type, message) {
     }
 }
 function delayedMessage(message) {
+    // Displays a success message to the user for 1 sec after the db has been updated before going back to main menu.
     console.log(message)
     setTimeout( () => {
         init();
     }, 1000)
 }
 const tableTitle = (selection) => {
+    // Dipslays the respective table title based on the users selection
     switch (true) {
         case selection.includes('view department utilized budget'):
-            return "Departments' Utilized Budgets";
+            return "Displaying: Departments' Utilized Budgets";
 
         case selection.includes('employee'):
-            return 'All Employees';
+            return 'Displaying: All Employees';
 
         case selection.includes('role'):
-            return 'All Roles';
+            return 'Displaying: All Roles';
 
         default:
-            return 'All Departments';
+            return 'Displaying: All Departments';
     }
+
 }
     
 // Connects mysql2 server and runs init on startup
